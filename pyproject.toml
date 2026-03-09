@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling>=1.25.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "wechat-longlink-sdk"
+version = "0.1.0"
+description = "Python long connection SDK skeleton for bot integration."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Proprietary" }
+authors = [
+  { name = "SDK Team" }
+]
+dependencies = [
+  "websocket-client>=1.8.0"
+]
+
+[project.urls]
+Homepage = "https://example.invalid/wechat-longlink-sdk"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/wechat_longlink_sdk"]
