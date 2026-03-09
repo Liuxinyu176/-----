@@ -40,11 +40,11 @@ SDK 以异常为主，错误码为辅：
 from wechat_longlink_sdk import (
     APIParameterValidationError,
     APIRetryExhaustedError,
-    BotClient,
     SDKConfig,
+    WecomLongLinkClient,
 )
 
-client = BotClient(SDKConfig(bot_id="your_bot_id", secret="your_secret"))
+client = WecomLongLinkClient(SDKConfig(bot_id="your_bot_id", secret="your_secret"))
 client.start()
 
 try:
@@ -60,7 +60,7 @@ finally:
 ## 最佳实践
 
 - 使用环境变量注入 `BOT_ID` 和 `BOT_SECRET`，避免凭据硬编码。
-- 在应用生命周期中只维护一个 `BotClient` 实例，减少重复连接开销。
+- 在应用生命周期中只维护一个 `WecomLongLinkClient` 实例，减少重复连接开销。
 - 先 `start()` 再发消息或调用 API，退出前始终 `stop()`。
 - 对 `APIRetryExhaustedError` 记录 `details["errors"]`，用于故障排查。
 - 将 `conversation.history.list` 的 `limit` 控制在合理区间，避免无效请求。

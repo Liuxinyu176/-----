@@ -1,0 +1,7 @@
+- [x] 已生成目标文档能力对照表，并标注“已支持/部分支持/未支持”
+- [x] 多消息类型发送与应答能力已实现且参数校验完整
+- [x] `enter_chat`、`template_card_event`、`feedback_event`、`disconnected_event` 已统一识别
+- [x] `aibot_respond_update_msg` 已提供封装并有测试覆盖
+- [x] 主动推送场景文档已补齐且示例可执行
+- [x] README、API 参考、能力矩阵与实现行为一致
+- [x] 全量测试通过且新增能力具备回归保障

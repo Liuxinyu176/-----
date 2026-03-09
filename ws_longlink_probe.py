@@ -114,24 +114,42 @@ def _event_name_from_payload(payload: Mapping[str, Any]) -> str:
     return ""
 
 
+def _normalized_event_name(event: Mapping[str, Any]) -> str:
+    event_name = event.get("event_name")
+    if isinstance(event_name, str) and event_name.strip():
+        return event_name.strip().lower()
+    raw = event.get("raw")
+    if not isinstance(raw, Mapping):
+        return ""
+    return _event_name_from_payload(raw).lower()
+
+
 def _is_enter_chat_event(event: Mapping[str, Any]) -> bool:
     if event.get("event") != "aibot_event_callback":
         return False
-    raw = event.get("raw")
-    if not isinstance(raw, Mapping):
-        return False
-    event_name = _event_name_from_payload(raw).lower()
+    event_name = _normalized_event_name(event)
     return "enter_chat" in event_name
 
 
 def _is_disconnected_event(event: Mapping[str, Any]) -> bool:
     if event.get("event") != "aibot_event_callback":
         return False
-    raw = event.get("raw")
-    if not isinstance(raw, Mapping):
-        return False
-    event_name = _event_name_from_payload(raw).lower()
+    event_name = _normalized_event_name(event)
     return "disconnected_event" in event_name
+
+
+def _is_template_card_event(event: Mapping[str, Any]) -> bool:
+    if event.get("event") != "aibot_event_callback":
+        return False
+    event_name = _normalized_event_name(event)
+    return "template_card_event" in event_name
+
+
+def _is_feedback_event(event: Mapping[str, Any]) -> bool:
+    if event.get("event") != "aibot_event_callback":
+        return False
+    event_name = _normalized_event_name(event)
+    return "feedback_event" in event_name
 
 
 def _extract_req_id(payload: Mapping[str, Any]) -> str:
@@ -255,6 +273,12 @@ def process_event(client: WecomLongLinkClient, event: Mapping[str, Any]) -> None
         handled = True
     if _is_disconnected_event(event):
         print("收到 disconnected_event：当前 BotID 连接已失效，通常是被同 BotID 的新连接顶掉")
+        handled = True
+    if _is_template_card_event(event):
+        print("收到 template_card_event 事件")
+        handled = True
+    if _is_feedback_event(event):
+        print("收到 feedback_event 事件")
         handled = True
     if _is_text_message(event):
         _reply_text_message(client, event)

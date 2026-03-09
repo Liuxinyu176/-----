@@ -106,6 +106,20 @@ class WsLonglinkProbeTestCase(unittest.TestCase):
         }
         self.assertTrue(ws_longlink_probe._is_disconnected_event(event))
 
+    def test_template_card_and_feedback_event_detection(self) -> None:
+        template_card_event = {
+            "event": "aibot_event_callback",
+            "event_name": "template_card_event",
+            "raw": {},
+        }
+        feedback_event = {
+            "event": "aibot_event_callback",
+            "event_name": "feedback_event",
+            "raw": {},
+        }
+        self.assertTrue(ws_longlink_probe._is_template_card_event(template_card_event))
+        self.assertTrue(ws_longlink_probe._is_feedback_event(feedback_event))
+
 
 if __name__ == "__main__":
     unittest.main()

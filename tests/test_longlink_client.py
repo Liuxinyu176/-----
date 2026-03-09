@@ -221,6 +221,93 @@ class WecomLongLinkClientTestCase(unittest.TestCase):
         self.assertNotIn("stream", payload["body"])
         client.stop()
 
+    def test_aibot_send_msg_rejects_finish_false_when_stream_is_false(self) -> None:
+        fake_ws = FakeWebSocket(recv_messages=[json.dumps({"errcode": 0})])
+        client = self._build_client(fake_ws)
+        client.start()
+        with self.assertRaises(ValueError):
+            client.aibot_send_msg(content="hello", chatid="chat_1", stream=False, finish=False)
+        client.stop()
+
+    def test_stream_stage_wrappers_generate_expected_stream_payload(self) -> None:
+        fake_ws = FakeWebSocket(
+            recv_messages=[
+                json.dumps({"errcode": 0}),
+                json.dumps({"errcode": 0}),
+                json.dumps({"errcode": 0}),
+                json.dumps({"errcode": 0}),
+            ]
+        )
+        client = self._build_client(fake_ws)
+        client.start()
+        start_result = client.aibot_send_msg_stream_start(content="part1", chatid="chat_1")
+        update_result = client.aibot_send_msg_stream_update(content="part2", msgid="msg_1", chatid="chat_1")
+        finish_result = client.aibot_send_msg_stream_finish(content="part3", msgid="msg_1", chatid="chat_1")
+        self.assertTrue(start_result["ok"])
+        self.assertTrue(update_result["ok"])
+        self.assertTrue(finish_result["ok"])
+        start_payload = json.loads(fake_ws.sent[-3])
+        update_payload = json.loads(fake_ws.sent[-2])
+        finish_payload = json.loads(fake_ws.sent[-1])
+        self.assertEqual(start_payload["body"]["stream"], {"finish": False})
+        self.assertNotIn("msgid", start_payload["body"])
+        self.assertEqual(update_payload["body"]["stream"], {"finish": False})
+        self.assertEqual(update_payload["body"]["msgid"], "msg_1")
+        self.assertEqual(finish_payload["body"]["stream"], {"finish": True})
+        self.assertEqual(finish_payload["body"]["msgid"], "msg_1")
+        client.stop()
+
+    def test_send_command_without_wait_response_uses_unified_result_model(self) -> None:
+        fake_ws = FakeWebSocket(recv_messages=[json.dumps({"errcode": 0})])
+        client = self._build_client(fake_ws)
+        client.start()
+        result = client.send_command({"action": "custom_action", "data": {"foo": "bar"}}, wait_response=False)
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["action"], "custom_action")
+        self.assertEqual(result["attempt"], 1)
+        self.assertEqual(result["errcode"], 0)
+        self.assertEqual(result["errmsg"], "ok")
+        self.assertIsNone(result["response"])
+        client.stop()
+
+    def test_send_command_with_error_response_uses_unified_result_model(self) -> None:
+        fake_ws = FakeWebSocket(recv_messages=[json.dumps({"errcode": 0}), json.dumps({"errcode": 93000, "errmsg": "denied"})])
+        client = self._build_client(fake_ws)
+        client.start()
+        result = client.send_command({"action": "custom_action"}, wait_response=True, raise_on_error=False)
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["action"], "custom_action")
+        self.assertEqual(result["errcode"], 93000)
+        self.assertEqual(result["errmsg"], "denied")
+        self.assertEqual(result["response"]["errcode"], 93000)
+        client.stop()
+
+    def test_aibot_respond_msg_generates_command(self) -> None:
+        fake_ws = FakeWebSocket(recv_messages=[json.dumps({"errcode": 0}), json.dumps({"errcode": 0, "errmsg": "ok"})])
+        client = self._build_client(fake_ws)
+        client.start()
+        result = client.aibot_respond_msg(req_id="req_1", content="reply content")
+        self.assertTrue(result["ok"])
+        payload = json.loads(fake_ws.sent[-1])
+        self.assertEqual(payload["cmd"], "aibot_respond_msg")
+        self.assertEqual(payload["headers"]["req_id"], "req_1")
+        self.assertEqual(payload["body"]["msgtype"], "markdown")
+        self.assertEqual(payload["body"]["markdown"]["content"], "reply content")
+        client.stop()
+
+    def test_aibot_respond_welcome_msg_generates_command(self) -> None:
+        fake_ws = FakeWebSocket(recv_messages=[json.dumps({"errcode": 0}), json.dumps({"errcode": 0, "errmsg": "ok"})])
+        client = self._build_client(fake_ws)
+        client.start()
+        result = client.aibot_respond_welcome_msg(req_id="req_2", content="welcome")
+        self.assertTrue(result["ok"])
+        payload = json.loads(fake_ws.sent[-1])
+        self.assertEqual(payload["cmd"], "aibot_respond_welcome_msg")
+        self.assertEqual(payload["headers"]["req_id"], "req_2")
+        self.assertEqual(payload["body"]["msgtype"], "text")
+        self.assertEqual(payload["body"]["text"]["content"], "welcome")
+        client.stop()
+
     def test_longlink_logs_redact_secret_and_emit_key_messages(self) -> None:
         fake_ws = FakeWebSocket(recv_messages=[json.dumps({"errcode": 0})])
         config = SDKConfig(bot_id="bot_1", secret="s3cr3t")

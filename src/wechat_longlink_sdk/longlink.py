@@ -100,25 +100,189 @@ class WecomLongLinkClient:
 
     def aibot_send_msg(
         self,
-        content: str,
+        content: str | None = None,
         chatid: str | None = None,
         userid: str | None = None,
         msgid: str | None = None,
+        msgtype: str = "markdown",
+        text: Mapping[str, Any] | None = None,
+        markdown: Mapping[str, Any] | None = None,
+        image: Mapping[str, Any] | None = None,
+        file: Mapping[str, Any] | None = None,
+        template_card: Mapping[str, Any] | None = None,
         stream: bool = False,
         finish: bool = True,
         wait_response: bool = True,
         max_attempts: int = 1,
         retry_interval_seconds: float = 0.2,
     ) -> dict[str, Any]:
-        data = self._build_send_data(content=content, chatid=chatid, userid=userid, msgid=msgid, stream=stream, finish=finish)
+        self._validate_stream_flags(stream=stream, finish=finish)
+        data = self._build_send_data(
+            content=content,
+            chatid=chatid,
+            userid=userid,
+            msgid=msgid,
+            msgtype=msgtype,
+            text=text,
+            markdown=markdown,
+            image=image,
+            file=file,
+            template_card=template_card,
+            stream=stream,
+            finish=finish,
+        )
         payload = {"action": "aibot_send_msg", "data": data}
-        command_result = self._send_with_retry(
+        return self._send_with_retry(
             payload=payload,
             wait_response=wait_response,
             max_attempts=max_attempts,
             retry_interval_seconds=retry_interval_seconds,
         )
-        return self._map_send_result(command_result)
+
+    def aibot_send_msg_stream_start(
+        self,
+        content: str,
+        chatid: str | None = None,
+        userid: str | None = None,
+        wait_response: bool = True,
+        max_attempts: int = 1,
+        retry_interval_seconds: float = 0.2,
+    ) -> dict[str, Any]:
+        return self.aibot_send_msg(
+            content=content,
+            chatid=chatid,
+            userid=userid,
+            msgtype="markdown",
+            stream=True,
+            finish=False,
+            wait_response=wait_response,
+            max_attempts=max_attempts,
+            retry_interval_seconds=retry_interval_seconds,
+        )
+
+    def aibot_send_msg_stream_update(
+        self,
+        content: str,
+        msgid: str,
+        chatid: str | None = None,
+        userid: str | None = None,
+        wait_response: bool = True,
+        max_attempts: int = 1,
+        retry_interval_seconds: float = 0.2,
+    ) -> dict[str, Any]:
+        return self.aibot_send_msg(
+            content=content,
+            chatid=chatid,
+            userid=userid,
+            msgid=msgid,
+            msgtype="markdown",
+            stream=True,
+            finish=False,
+            wait_response=wait_response,
+            max_attempts=max_attempts,
+            retry_interval_seconds=retry_interval_seconds,
+        )
+
+    def aibot_send_msg_stream_finish(
+        self,
+        content: str,
+        msgid: str,
+        chatid: str | None = None,
+        userid: str | None = None,
+        wait_response: bool = True,
+        max_attempts: int = 1,
+        retry_interval_seconds: float = 0.2,
+    ) -> dict[str, Any]:
+        return self.aibot_send_msg(
+            content=content,
+            chatid=chatid,
+            userid=userid,
+            msgid=msgid,
+            msgtype="markdown",
+            stream=True,
+            finish=True,
+            wait_response=wait_response,
+            max_attempts=max_attempts,
+            retry_interval_seconds=retry_interval_seconds,
+        )
+
+    def aibot_respond_msg(
+        self,
+        req_id: str,
+        content: str | None = None,
+        msgtype: str = "markdown",
+        text: Mapping[str, Any] | None = None,
+        markdown: Mapping[str, Any] | None = None,
+        image: Mapping[str, Any] | None = None,
+        file: Mapping[str, Any] | None = None,
+        template_card: Mapping[str, Any] | None = None,
+        wait_response: bool = True,
+        raise_on_error: bool = False,
+    ) -> dict[str, Any]:
+        payload = {
+            "action": "aibot_respond_msg",
+            "headers": {"req_id": self._validate_req_id(req_id)},
+            "body": self._build_message_body(
+                msgtype=msgtype,
+                content=content,
+                text=text,
+                markdown=markdown,
+                image=image,
+                file=file,
+                template_card=template_card,
+            ),
+        }
+        return self.send_command(payload, wait_response=wait_response, raise_on_error=raise_on_error)
+
+    def aibot_respond_welcome_msg(
+        self,
+        req_id: str,
+        content: str | None = None,
+        msgtype: str = "text",
+        text: Mapping[str, Any] | None = None,
+        markdown: Mapping[str, Any] | None = None,
+        image: Mapping[str, Any] | None = None,
+        file: Mapping[str, Any] | None = None,
+        template_card: Mapping[str, Any] | None = None,
+        wait_response: bool = True,
+        raise_on_error: bool = False,
+    ) -> dict[str, Any]:
+        payload = {
+            "action": "aibot_respond_welcome_msg",
+            "headers": {"req_id": self._validate_req_id(req_id)},
+            "body": self._build_message_body(
+                msgtype=msgtype,
+                content=content,
+                text=text,
+                markdown=markdown,
+                image=image,
+                file=file,
+                template_card=template_card,
+            ),
+        }
+        return self.send_command(payload, wait_response=wait_response, raise_on_error=raise_on_error)
+
+    def aibot_respond_update_msg(
+        self,
+        req_id: str,
+        template_card: Mapping[str, Any],
+        response_type: str = "update_template_card",
+        wait_response: bool = True,
+        raise_on_error: bool = False,
+    ) -> dict[str, Any]:
+        clean_response_type = response_type.strip() if isinstance(response_type, str) else ""
+        if not clean_response_type:
+            raise ValueError("response_type is required")
+        template_card_payload = self._require_template_card(template_card)
+        payload = {
+            "action": "aibot_respond_update_msg",
+            "headers": {"req_id": self._validate_req_id(req_id)},
+            "body": {
+                "response_type": clean_response_type,
+                "template_card": template_card_payload,
+            },
+        }
+        return self.send_command(payload, wait_response=wait_response, raise_on_error=raise_on_error)
 
     def send_command(
         self,
@@ -135,7 +299,7 @@ class WecomLongLinkClient:
         ws.send(serialized)
         self.logger.debug("longlink command sent: %s", serialized)
         if not wait_response:
-            return {"ok": True, "payload": dict(protocol_payload)}
+            return self._map_command_result(payload=dict(protocol_payload), response=None)
         parsed = self._wait_response(ws=ws)
         result = self._map_command_result(payload=dict(protocol_payload), response=parsed)
         if raise_on_error and not result["ok"]:
@@ -280,25 +444,28 @@ class WecomLongLinkClient:
         if isinstance(errcode, int) and errcode != 0:
             errmsg = str(response.get("errmsg", "unknown error"))
             raise RuntimeError(f"longlink command failed: errcode={errcode}, errmsg={errmsg}")
+        if response.get("ok") is False:
+            errmsg = str(response.get("errmsg", "unknown error"))
+            raise RuntimeError(f"longlink command failed: errcode=-1, errmsg={errmsg}")
 
-    def _map_command_result(self, payload: Mapping[str, Any], response: Mapping[str, Any]) -> dict[str, Any]:
-        errcode = response.get("errcode")
-        ok = not isinstance(errcode, int) or errcode == 0
-        return {"ok": ok, "payload": dict(payload), "response": dict(response)}
-
-    def _map_send_result(self, command_result: Mapping[str, Any]) -> dict[str, Any]:
-        response = command_result.get("response")
+    def _map_command_result(
+        self,
+        payload: Mapping[str, Any],
+        response: Mapping[str, Any] | None,
+        attempt: int = 1,
+    ) -> dict[str, Any]:
         response_dict = dict(response) if isinstance(response, Mapping) else None
-        errcode = response_dict.get("errcode") if response_dict is not None else 0
-        errmsg = response_dict.get("errmsg") if response_dict is not None else "ok"
+        errcode = self._extract_errcode(response_dict)
+        ok = True if response_dict is None else errcode == 0
+        errmsg = self._extract_errmsg(response_dict, ok=ok)
         return {
-            "ok": bool(command_result.get("ok")),
-            "action": "aibot_send_msg",
-            "attempt": int(command_result.get("attempt", 1)),
-            "payload": dict(command_result.get("payload", {})),
+            "ok": ok,
+            "action": self._resolve_action_name(payload),
+            "attempt": attempt,
+            "payload": dict(payload),
             "response": response_dict,
             "errcode": errcode,
-            "errmsg": str(errmsg) if errmsg is not None else "",
+            "errmsg": errmsg,
         }
 
     def _send_with_retry(
@@ -327,9 +494,7 @@ class WecomLongLinkClient:
                 time.sleep(retry_interval_seconds)
                 continue
             if result.get("ok", False):
-                merged = dict(result)
-                merged["attempt"] = attempt
-                return merged
+                return self._map_command_result(payload=payload, response=result.get("response"), attempt=attempt)
             response = result.get("response", {})
             errcode = response.get("errcode") if isinstance(response, Mapping) else None
             errmsg = response.get("errmsg") if isinstance(response, Mapping) else "unknown error"
@@ -350,22 +515,33 @@ class WecomLongLinkClient:
 
     def _build_send_data(
         self,
-        content: str,
+        content: str | None,
         chatid: str | None,
         userid: str | None,
         msgid: str | None,
+        msgtype: str,
+        text: Mapping[str, Any] | None,
+        markdown: Mapping[str, Any] | None,
+        image: Mapping[str, Any] | None,
+        file: Mapping[str, Any] | None,
+        template_card: Mapping[str, Any] | None,
         stream: bool,
         finish: bool,
     ) -> dict[str, Any]:
-        if not content or not content.strip():
-            raise ValueError("content is required")
         target = self._normalize_send_target(chatid=chatid, userid=userid)
-        data: dict[str, Any] = {
-            **target,
-            "msgtype": "markdown",
-            "markdown": {"content": content},
-        }
+        message_payload = self._build_message_body(
+            msgtype=msgtype,
+            content=content,
+            text=text,
+            markdown=markdown,
+            image=image,
+            file=file,
+            template_card=template_card,
+        )
+        data: dict[str, Any] = {**target, **message_payload}
         if stream:
+            if data.get("msgtype") != "markdown":
+                raise ValueError("stream only supports markdown msgtype")
             data["stream"] = {"finish": finish}
         if msgid is not None:
             clean_msgid = msgid.strip()
@@ -375,6 +551,115 @@ class WecomLongLinkClient:
         if self.config.api_bot_id:
             data["aibotid"] = self.config.api_bot_id
         return data
+
+    def _validate_stream_flags(self, stream: bool, finish: bool) -> None:
+        if not stream and not finish:
+            raise ValueError("finish must be True when stream is False")
+
+    def _validate_req_id(self, req_id: str) -> str:
+        clean_req_id = req_id.strip() if isinstance(req_id, str) else ""
+        if not clean_req_id:
+            raise ValueError("req_id is required")
+        return clean_req_id
+
+    def _build_message_body(
+        self,
+        msgtype: str,
+        content: str | None = None,
+        text: Mapping[str, Any] | None = None,
+        markdown: Mapping[str, Any] | None = None,
+        image: Mapping[str, Any] | None = None,
+        file: Mapping[str, Any] | None = None,
+        template_card: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        clean_msgtype = msgtype.strip().lower() if isinstance(msgtype, str) else ""
+        if clean_msgtype == "text":
+            return {"msgtype": "text", "text": self._build_content_payload(content=content, payload=text, field_name="text")}
+        if clean_msgtype == "markdown":
+            return {
+                "msgtype": "markdown",
+                "markdown": self._build_content_payload(content=content, payload=markdown, field_name="markdown"),
+            }
+        if clean_msgtype == "image":
+            return {"msgtype": "image", "image": self._require_media_payload(image, field_name="image")}
+        if clean_msgtype == "file":
+            return {"msgtype": "file", "file": self._require_media_payload(file, field_name="file")}
+        if clean_msgtype == "template_card":
+            return {"msgtype": "template_card", "template_card": self._require_template_card(template_card)}
+        raise ValueError("msgtype must be one of: text, markdown, image, file, template_card")
+
+    def _build_content_payload(
+        self,
+        content: str | None,
+        payload: Mapping[str, Any] | None,
+        field_name: str,
+    ) -> dict[str, Any]:
+        if payload is not None:
+            payload_dict = self._require_mapping(payload, field_name=field_name)
+            value = payload_dict.get("content")
+            clean_content = value.strip() if isinstance(value, str) else ""
+            if not clean_content:
+                raise ValueError(f"{field_name}.content is required")
+            payload_dict["content"] = clean_content
+            return payload_dict
+        clean_content = content.strip() if isinstance(content, str) else ""
+        if not clean_content:
+            raise ValueError("content is required")
+        return {"content": clean_content}
+
+    def _require_media_payload(self, payload: Mapping[str, Any] | None, field_name: str) -> dict[str, Any]:
+        payload_dict = self._require_mapping(payload, field_name=field_name)
+        required_fields = ("media_id", "url", "image_url", "file_url", "file_id")
+        for key in required_fields:
+            value = payload_dict.get(key)
+            if isinstance(value, str) and value.strip():
+                payload_dict[key] = value.strip()
+                return payload_dict
+        raise ValueError(f"{field_name} requires one of: media_id, url, image_url, file_url, file_id")
+
+    def _require_template_card(self, payload: Mapping[str, Any] | None) -> dict[str, Any]:
+        payload_dict = self._require_mapping(payload, field_name="template_card")
+        card_type = payload_dict.get("card_type")
+        clean_card_type = card_type.strip() if isinstance(card_type, str) else ""
+        if not clean_card_type:
+            raise ValueError("template_card.card_type is required")
+        payload_dict["card_type"] = clean_card_type
+        return payload_dict
+
+    def _require_mapping(self, payload: Mapping[str, Any] | None, field_name: str) -> dict[str, Any]:
+        if not isinstance(payload, Mapping):
+            raise ValueError(f"{field_name} is required")
+        payload_dict = dict(payload)
+        if not payload_dict:
+            raise ValueError(f"{field_name} is required")
+        return payload_dict
+
+    def _resolve_action_name(self, payload: Mapping[str, Any]) -> str:
+        cmd = payload.get("cmd")
+        if isinstance(cmd, str) and cmd:
+            return cmd
+        action = payload.get("action")
+        if isinstance(action, str):
+            return action
+        return ""
+
+    def _extract_errcode(self, response: Mapping[str, Any] | None) -> int:
+        if response is None:
+            return 0
+        errcode = response.get("errcode")
+        if isinstance(errcode, int) and not isinstance(errcode, bool):
+            return errcode
+        if bool(response.get("ok", True)):
+            return 0
+        return -1
+
+    def _extract_errmsg(self, response: Mapping[str, Any] | None, ok: bool) -> str:
+        if response is None:
+            return "ok"
+        errmsg = response.get("errmsg")
+        if isinstance(errmsg, str):
+            return errmsg
+        return "ok" if ok else "unknown error"
 
     def _normalize_send_target(self, chatid: str | None, userid: str | None) -> dict[str, str]:
         clean_chatid = chatid.strip() if isinstance(chatid, str) else ""
@@ -436,6 +721,11 @@ class WecomLongLinkClient:
         data = payload.get("data")
         body = payload.get("body")
         source = data if isinstance(data, Mapping) else body if isinstance(body, Mapping) else payload
+        headers = payload.get("headers")
+        headers_dict = headers if isinstance(headers, Mapping) else {}
+        req_id = headers_dict.get("req_id")
+        req_id_value = req_id if isinstance(req_id, str) and req_id.strip() else None
+        event_subtype = self._extract_event_subtype(source)
         msgid = source.get("msgid") or payload.get("msgid")
         chatid = source.get("chatid") or payload.get("chatid")
         source_from = source.get("from")
@@ -451,7 +741,9 @@ class WecomLongLinkClient:
         aibotid = source.get("aibotid") or payload.get("aibotid")
         unified_event = {
             "event": event_name,
+            "event_name": event_subtype or event_name,
             "event_type": "message" if event_name == "aibot_msg_callback" else "event",
+            "req_id": req_id_value,
             "msgid": msgid,
             "chatid": chatid,
             "userid": userid,
@@ -462,6 +754,19 @@ class WecomLongLinkClient:
             if key not in unified_event:
                 unified_event[key] = value
         return unified_event
+
+    def _extract_event_subtype(self, payload: Mapping[str, Any]) -> str | None:
+        event = payload.get("event")
+        if isinstance(event, str) and event.strip():
+            return event.strip()
+        if isinstance(event, Mapping):
+            event_type = event.get("eventtype")
+            if isinstance(event_type, str) and event_type.strip():
+                return event_type.strip()
+        event_type = payload.get("event_type")
+        if isinstance(event_type, str) and event_type.strip():
+            return event_type.strip()
+        return None
 
     def _to_protocol_payload(self, payload: Mapping[str, Any]) -> dict[str, Any]:
         payload_dict = dict(payload)
