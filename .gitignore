@@ -1,1 +1,6 @@
 ws_longlink_probe.local.json
+.trae/
+.pytest_cache/
+tests/
+__pycache__/
+*.pyc
