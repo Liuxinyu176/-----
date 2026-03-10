@@ -1,0 +1,12 @@
+{
+  "bot_id": "xxx",
+  "secret": "xxx",
+  "api_bot_id": "可选",
+  "websocket_url": "wss://openws.work.weixin.qq.com",
+  "heartbeat_interval_seconds": 30.0,
+  "reconnect_interval_seconds": 5.0,
+  "max_reconnect_attempts": 0,
+
+  "wecom_corp_id": "可选，仅用于素材上传",
+  "wecom_corp_secret": "可选，仅用于素材上传"
+}
