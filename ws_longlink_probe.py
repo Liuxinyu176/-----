@@ -24,7 +24,6 @@ from wechat_longlink_sdk import (
 )
 
 PROBE_LOCAL_CONFIG_PATH = Path(__file__).with_name("ws_longlink_probe.local.json")
-_MEDIA_UPLOAD_TOKEN: dict[str, Any] = {"access_token": "", "expires_at": 0.0}
 
 
 def _build_probe_logger() -> logging.Logger:
@@ -87,11 +86,6 @@ def _resolve_media_upload_credentials() -> tuple[str, str]:
 
 
 def _get_wecom_access_token(corp_id: str, corp_secret: str) -> str:
-    now = time.time()
-    access_token = _MEDIA_UPLOAD_TOKEN.get("access_token")
-    expires_at = _MEDIA_UPLOAD_TOKEN.get("expires_at")
-    if isinstance(access_token, str) and access_token and isinstance(expires_at, (int, float)) and now < float(expires_at) - 30:
-        return access_token
     query = urllib.parse.urlencode({"corpid": corp_id, "corpsecret": corp_secret})
     url = f"https://qyapi.weixin.qq.com/cgi-bin/gettoken?{query}"
     try:
@@ -106,10 +100,6 @@ def _get_wecom_access_token(corp_id: str, corp_secret: str) -> str:
     token = payload.get("access_token")
     if not isinstance(token, str) or not token:
         raise RuntimeError("获取 access_token 失败: 缺少 access_token")
-    expires_in = payload.get("expires_in")
-    expires_seconds = float(expires_in) if isinstance(expires_in, (int, float)) else 7200.0
-    _MEDIA_UPLOAD_TOKEN["access_token"] = token
-    _MEDIA_UPLOAD_TOKEN["expires_at"] = now + expires_seconds
     return token
 
 
