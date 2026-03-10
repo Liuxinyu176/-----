@@ -128,28 +128,16 @@ client.aibot_send_msg(
 )
 ```
 
-## 最小长连接测试代码
+## 最小运行示例
 
-先配置环境变量：
+```python
+from wechat_longlink_sdk import SDKConfig, WecomLongLinkClient
 
-```bash
-set WECHAT_BOT_ID=your_bot_id
-set WECHAT_BOT_SECRET=your_secret
+client = WecomLongLinkClient(SDKConfig.from_env())
+client.start()
+client.aibot_send_msg(content="hello from longlink", chatid="your_chat_id")
+client.stop()
 ```
-
-再直接运行：
-
-```bash
-python ws_longlink_probe.py
-```
-
-脚本将完成以下最小闭环：
-- 连接 `wss://openws.work.weixin.qq.com`
-- 自动发送 `aibot_subscribe` 完成鉴权
-- 维持 30 秒心跳保活（由 SDK 内置心跳线程执行）
-- 收到文本回调后打印 `req_id`、`msgid`、`chatid`、`userid` 并回复确认文本
-- 收到 `enter_chat` 事件时触发欢迎语应答
-- 按 `Ctrl + C` 触发优雅断开
 
 ## BREAKING 迁移说明
 

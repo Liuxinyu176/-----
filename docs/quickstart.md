@@ -67,22 +67,18 @@ client.stop()
 
 ## 最小可运行示例
 
-最小测试脚本已提供：`ws_longlink_probe.py`。
-
 Windows 下可直接执行：
 
 ```bash
 set WECHAT_BOT_ID=your_bot_id
 set WECHAT_BOT_SECRET=your_secret
-python ws_longlink_probe.py
+python -c "from wechat_longlink_sdk import SDKConfig, WecomLongLinkClient; c=WecomLongLinkClient(SDKConfig.from_env()); c.start(); c.aibot_send_msg(content='长连接发送测试', chatid='your_chat_id'); c.stop()"
 ```
 
 运行后预期输出：
-- 启动最小长连接测试与心跳间隔
-- 订阅成功并进入等待回调状态
-- 收到文本时打印 `req_id`、`msgid`、`chatid`、`userid`
-- 自动回发最小确认消息
-- `Ctrl + C` 后输出优雅断开日志
+- 订阅成功并建立长连接
+- 调用 `aibot_send_msg` 成功返回统一结构
+- 连接正常关闭
 
 ## 运行建议
 

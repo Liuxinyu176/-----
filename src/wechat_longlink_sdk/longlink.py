@@ -234,6 +234,70 @@ class WecomLongLinkClient:
         }
         return self.send_command(payload, wait_response=wait_response, raise_on_error=raise_on_error)
 
+    def aibot_respond_msg_stream_start(
+        self,
+        req_id: str,
+        content: str,
+        wait_response: bool = True,
+        raise_on_error: bool = False,
+    ) -> dict[str, Any]:
+        payload = {
+            "action": "aibot_respond_msg",
+            "headers": {"req_id": self._validate_req_id(req_id)},
+            "body": {
+                "msgtype": "markdown",
+                "markdown": self._build_content_payload(content=content, payload=None, field_name="markdown"),
+                "stream": {"finish": False},
+            },
+        }
+        return self.send_command(payload, wait_response=wait_response, raise_on_error=raise_on_error)
+
+    def aibot_respond_msg_stream_update(
+        self,
+        req_id: str,
+        msgid: str,
+        content: str,
+        wait_response: bool = True,
+        raise_on_error: bool = False,
+    ) -> dict[str, Any]:
+        clean_msgid = msgid.strip() if isinstance(msgid, str) else ""
+        if not clean_msgid:
+            raise ValueError("msgid is required")
+        payload = {
+            "action": "aibot_respond_msg",
+            "headers": {"req_id": self._validate_req_id(req_id)},
+            "body": {
+                "msgtype": "markdown",
+                "markdown": self._build_content_payload(content=content, payload=None, field_name="markdown"),
+                "msgid": clean_msgid,
+                "stream": {"finish": False},
+            },
+        }
+        return self.send_command(payload, wait_response=wait_response, raise_on_error=raise_on_error)
+
+    def aibot_respond_msg_stream_finish(
+        self,
+        req_id: str,
+        msgid: str,
+        content: str,
+        wait_response: bool = True,
+        raise_on_error: bool = False,
+    ) -> dict[str, Any]:
+        clean_msgid = msgid.strip() if isinstance(msgid, str) else ""
+        if not clean_msgid:
+            raise ValueError("msgid is required")
+        payload = {
+            "action": "aibot_respond_msg",
+            "headers": {"req_id": self._validate_req_id(req_id)},
+            "body": {
+                "msgtype": "markdown",
+                "markdown": self._build_content_payload(content=content, payload=None, field_name="markdown"),
+                "msgid": clean_msgid,
+                "stream": {"finish": True},
+            },
+        }
+        return self.send_command(payload, wait_response=wait_response, raise_on_error=raise_on_error)
+
     def aibot_respond_welcome_msg(
         self,
         req_id: str,

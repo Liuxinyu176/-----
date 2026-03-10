@@ -13,7 +13,8 @@ authors = [
   { name = "SDK Team" }
 ]
 dependencies = [
-  "websocket-client>=1.8.0"
+  "websocket-client>=1.8.0",
+  "cryptography>=42.0.0"
 ]
 
 [project.urls]
